@@ -1,0 +1,130 @@
+.page {
+  min-height: 100%;
+  padding: 2rem 2.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: fade-up 0.3s ease both;
+}
+
+.header { max-width: 560px; }
+.title {
+  font-family: var(--mono);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+.sub { color: var(--text-2); font-size: 0.85rem; }
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  max-width: 540px;
+}
+
+/* ── Camera preview ─────────────────── */
+.camPreview {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.corner {
+  position: absolute;
+  width: 20px; height: 20px;
+  border-color: rgba(0,180,220,0.4);
+  border-style: solid;
+}
+.tl { top:10px;  left:10px;  border-width: 2px 0 0 2px; }
+.tr { top:10px;  right:10px; border-width: 2px 2px 0 0; }
+.bl { bottom:10px; left:10px;  border-width: 0 0 2px 2px; }
+.br { bottom:10px; right:10px; border-width: 0 2px 2px 0; }
+
+.camInner {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px; text-align: center;
+}
+
+.camIconWrap {
+  position: relative;
+  width: 80px; height: 80px;
+  border-radius: 50%;
+  background: rgba(0,180,220,0.07);
+  border: 1px solid rgba(0,180,220,0.15);
+  display: flex; align-items: center; justify-content: center;
+}
+
+.camIcon { color: rgba(0,180,220,0.45); }
+
+.camPulse {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid rgba(0,180,220,0.12);
+  animation: dot-pulse 2s ease-in-out infinite;
+}
+
+.camTitle { font-size: 0.9rem; font-weight: 600; color: var(--text); }
+.camSub   { font-size: 0.75rem; color: var(--text-2); max-width: 260px; line-height: 1.5; }
+
+.liveBadge {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: flex; align-items: center; gap: 5px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(244,63,94,0.12);
+  border: 1px solid rgba(244,63,94,0.25);
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em;
+  color: var(--red);
+}
+
+/* ── Settings ───────────────────────── */
+.settingsCard {
+  padding: 1.1rem 1.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settingsTitle {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 0.8rem; font-weight: 600; color: var(--text);
+}
+
+.camIndexRow { display: flex; gap: 6px; }
+
+.camIndexBtn {
+  padding: 0.38rem 0.9rem !important;
+  font-family: var(--mono) !important;
+  font-size: 0.8rem !important;
+}
+
+.settingsNote {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.73rem; color: var(--text-2);
+}
+
+/* ── Specs ──────────────────────────── */
+.specGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem 1rem;
+  padding: 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.specItem { display: flex; flex-direction: column; gap: 2px; }
+.specLabel { font-size: 0.68rem; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.05em; }
+.specVal   { font-size: 0.78rem; color: var(--text); font-weight: 500; }

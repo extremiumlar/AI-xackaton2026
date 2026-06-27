@@ -1,0 +1,56 @@
+# Zakladchik Detection — Sozlamalar
+
+models:
+  detector: yolov8n.pt          # person detector (avto-yuklanadi)
+  pose: yolov8n-pose.pt         # pose estimator
+  tracker: bytetrack.yaml       # Multi-object tracker config
+
+detection:
+  person_class_id: 0            # COCO da 0 = person
+  conf_threshold: 0.4           # Detection confidence
+  iou_threshold: 0.5
+  device: cpu                   # cpu yoki cuda:0
+
+behavior:
+  # Cho'qqayish (crouch) aniqlash
+  crouch_ratio_threshold: 0.65  # hip-ankle masofa / bbox height. < bu = cho'qqaygan
+
+  # Yerga qo'l uzatish
+  hand_to_ground_threshold: 0.85  # wrist_y / bbox_bottom_y. > bu = yerga uzatilgan
+
+  # Loitering (sababsiz turish)
+  loiter_seconds: 15            # shuncha sekund bir joyda = loiter
+  loiter_radius_px: 80          # shu radiusda turish "bir joyda"
+
+  # Atrofga qarash
+  look_around_window: 30        # 30 freym ichida
+  look_around_threshold: 5      # 5+ marta yo'nalish almashtirsa
+
+suspicion:
+  # Har bir xatti-harakat uchun ball
+  weights:
+    crouch: 0.30
+    hand_to_ground: 0.40
+    loiter: 0.20
+    look_around: 0.10
+
+  # Total score > shu = SHUBHALI
+  alert_threshold: 0.55
+
+  # Score shuncha freym davomida threshold ustida bo'lsa = ALERT
+  sustained_frames: 10
+
+output:
+  save_video: true
+  video_dir: output/
+  log_dir: logs/
+  alert_image_dir: output/alerts/
+
+  draw_keypoints: true
+  draw_bbox: true
+  draw_track_id: true
+  draw_suspicion_score: true
+
+video:
+  resize_width: 960             # 0 = original
+  skip_frames: 0                # 0 = har bir freymni qayta ishlash

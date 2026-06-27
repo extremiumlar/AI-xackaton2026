@@ -1,0 +1,152 @@
+.header {
+  position: relative;
+  text-align: center;
+  padding: 2.2rem 1rem 1.8rem;
+  border-bottom: 1px solid rgba(0, 200, 238, 0.07);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.bgGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,180,220,0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,220,0.025) 1px, transparent 1px);
+  background-size: 44px 44px;
+  pointer-events: none;
+}
+
+/* ── 3D logo system ── */
+.logoWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 0.9rem;
+  animation: float 4s ease-in-out infinite;
+}
+
+/* 3D tilted orbit rings — the key 3D effect */
+.orbitRing {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 200, 238, 0.4);
+}
+
+.orbit1 {
+  width: 172px;
+  height: 172px;
+  border-style: dashed;
+  border-color: rgba(0, 200, 238, 0.38);
+  animation: orbit3d 11s linear infinite;
+}
+
+.orbit2 {
+  width: 140px;
+  height: 140px;
+  border-color: rgba(0, 160, 200, 0.25);
+  animation: orbit3d 7s linear infinite reverse;
+}
+
+.orbit3 {
+  width: 108px;
+  height: 108px;
+  border-style: dotted;
+  border-color: rgba(0, 130, 180, 0.18);
+  animation: orbit3d 16s linear infinite;
+}
+
+.shield {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 14px rgba(0, 200, 238, 0.5));
+}
+
+/* Blip (radar target) dots */
+.blip {
+  position: absolute;
+  border-radius: 50%;
+  z-index: 3;
+}
+.blip1 { width: 8px; height: 8px; background: #ff4466; top: 28px; right: 30px; animation: blip-pulse 1.8s ease-in-out infinite; }
+.blip2 { width: 6px; height: 6px; background: #ff4466; bottom: 34px; left: 26px; animation: blip-pulse 2.3s ease-in-out infinite 0.7s; }
+.blip3 { width: 5px; height: 5px; background: #ff9900; bottom: 30px; right: 38px; animation: blip-pulse 2.1s ease-in-out infinite 1.4s; }
+
+/* ── Title ── */
+.title {
+  font-family: 'Orbitron', monospace;
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #00c8ee;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  animation: glow-pulse 3s ease-in-out infinite;
+  margin-bottom: 0.1rem;
+}
+
+.ai {
+  color: #ff4466;
+  text-shadow: 0 0 16px rgba(255, 68, 102, 0.65), 0 0 32px rgba(255, 68, 102, 0.28);
+}
+
+.subtitle {
+  color: #486880;
+  font-size: 0.78rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 0.6rem 0 1.3rem;
+}
+
+/* ── Badges ── */
+.badges {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: #3a6880;
+  background: rgba(0, 180, 220, 0.05);
+  border: 1px solid rgba(0, 180, 220, 0.12);
+  border-radius: 20px;
+  padding: 4px 13px;
+  letter-spacing: 0.04em;
+  transition: border-color 0.2s, color 0.2s;
+}
+.badge:hover { border-color: rgba(0,180,220,0.28); color: #5090a8; }
+
+.badgeIcon { color: #00c8ee; font-size: 0.65rem; }
+
+/* ── Animations (local names reference global @keyframes in index.css) ── */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes orbit3d {
+  0%   { transform: perspective(400px) rotateX(68deg) rotateZ(0deg); }
+  100% { transform: perspective(400px) rotateX(68deg) rotateZ(360deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { text-shadow: 0 0 14px rgba(0,200,238,.6), 0 0 28px rgba(0,200,238,.25); }
+  50%       { text-shadow: 0 0 28px rgba(0,200,238,.9), 0 0 55px rgba(0,200,238,.45); }
+}
+
+@keyframes blip-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 currentColor; }
+  50%       { opacity: 0.3; transform: scale(0.65); }
+}
+
+@keyframes sweep {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

@@ -1,0 +1,12 @@
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transition: transform 0.08s ease, box-shadow 0.15s ease, border-color 0.15s;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+.card:hover {
+  border-color: rgba(0,180,220,0.18);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.35), 0 0 24px rgba(0,180,220,0.06);
+}

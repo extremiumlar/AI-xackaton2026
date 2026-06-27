@@ -1,0 +1,156 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+/* Source box */
+.sourceBox {
+  min-height: 90px;
+}
+
+/* Upload drop zone */
+.uploadArea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 2px dashed rgba(0, 180, 220, 0.2);
+  border-radius: 12px;
+  padding: 1.6rem 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: rgba(0, 180, 220, 0.02);
+}
+.uploadArea:hover {
+  border-color: rgba(0, 180, 220, 0.4);
+  background: rgba(0, 180, 220, 0.05);
+}
+.uploadIcon { color: #00c8ee; opacity: 0.5; }
+.uploadTitle { font-size: 0.88rem; color: #5090a8; font-weight: 500; }
+.uploadSub { font-size: 0.73rem; color: #2a5070; }
+
+/* Camera card */
+.camCard {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(0, 180, 220, 0.05);
+  border: 1px solid rgba(0, 180, 220, 0.15);
+  border-radius: 12px;
+  padding: 1rem 1.2rem;
+}
+.camIcon { color: #00c8ee; opacity: 0.7; flex-shrink: 0; }
+.camTitle { font-size: 0.88rem; color: #00c8ee; font-weight: 600; }
+.camSub { font-size: 0.74rem; color: #3a6080; margin: 3px 0 8px; }
+.camIndexRow { display: flex; align-items: center; gap: 8px; }
+.rowLabel { font-size: 0.76rem; color: #3a6080; }
+
+/* Demo box */
+.demoBox { display: flex; flex-direction: column; gap: 8px; }
+.noDemo { font-size: 0.82rem; color: #3a6080; padding: 0.8rem 0; }
+
+/* Run button row */
+.btnRow { margin-top: 0.25rem; }
+
+/* Video display */
+.videoWrap {
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(4, 8, 16, 0.9);
+  border: 1px solid rgba(0, 180, 220, 0.15);
+  min-height: 320px;
+  animation: border-glow 4s ease-in-out infinite;
+}
+
+.videoImg {
+  width: 100%;
+  display: block;
+  border-radius: 14px;
+}
+
+/* Scanning line overlay */
+.scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0, 200, 238, 0.55), transparent);
+  animation: scanline 4s linear infinite;
+  pointer-events: none;
+}
+
+/* LIVE badge */
+.liveTag {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 50, 80, 0.15);
+  border: 1px solid rgba(255, 68, 102, 0.35);
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #ff4466;
+  letter-spacing: 0.1em;
+}
+
+/* Corner brackets */
+.cornerTL, .cornerTR, .cornerBL, .cornerBR {
+  position: absolute;
+  width: 18px; height: 18px;
+  border-color: rgba(0, 200, 238, 0.5);
+  border-style: solid;
+}
+.cornerTL { top: 10px; left: 10px; border-width: 2px 0 0 2px; }
+.cornerTR { top: 10px; right: 10px; border-width: 2px 2px 0 0; }
+.cornerBL { bottom: 10px; left: 10px; border-width: 0 0 2px 2px; }
+.cornerBR { bottom: 10px; right: 10px; border-width: 0 2px 2px 0; }
+
+/* Idle screen */
+.idleScreen {
+  position: relative;
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.idleGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,180,220,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,180,220,0.04) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+}
+.idleCenter {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.idleText {
+  font-size: 0.8rem;
+  color: #2a4860;
+  letter-spacing: 0.04em;
+  text-align: center;
+  max-width: 280px;
+}
+
+/* Animations */
+@keyframes border-glow {
+  0%, 100% { border-color: rgba(0, 190, 230, 0.15); }
+  50%       { border-color: rgba(0, 190, 230, 0.32); }
+}
+
+@keyframes scanline {
+  0%   { top: 0%; opacity: 0.7; }
+  95%  { opacity: 0.5; }
+  100% { top: 100%; opacity: 0; }
+}

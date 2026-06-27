@@ -1,0 +1,35 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.env
+
+# Node
+node_modules/
+frontend/node_modules/
+
+# Output & logs
+output/
+logs/
+*.mp4
+*.avi
+
+# IDE
+.vscode/
+.idea/
+*.lnk
+
+# OS
+.DS_Store
+desktop.ini
+Thumbs.db
+
+# Playwright test artifacts
+test-results/
+playwright-report/

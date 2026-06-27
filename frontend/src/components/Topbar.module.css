@@ -1,0 +1,140 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  height: var(--nav-h);
+  padding: 0 1.2rem;
+  gap: 1rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 100;
+}
+
+/* ── Logo ────────────────────────── */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.logoIcon {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* tiny 3D orbit rings */
+.ring1, .ring2 {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0,180,220,0.28);
+  pointer-events: none;
+}
+.ring1 {
+  width: 48px; height: 48px;
+  transform: perspective(160px) rotateX(60deg);
+  animation: orbit3d 5s linear infinite;
+}
+.ring2 {
+  width: 38px; height: 38px;
+  transform: perspective(160px) rotateX(60deg);
+  animation: orbit3d-rev 3.5s linear infinite;
+  border-color: rgba(0,180,220,0.16);
+}
+
+@keyframes orbit3d     { to { transform: perspective(160px) rotateX(60deg) rotateZ(360deg);  } }
+@keyframes orbit3d-rev { to { transform: perspective(160px) rotateX(60deg) rotateZ(-360deg); } }
+
+.logoText {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.logoName {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #e2e8f0;
+}
+
+.logoAI {
+  color: #f43f5e;
+}
+
+.logoSub {
+  font-size: 0.62rem;
+  color: var(--text-3);
+  letter-spacing: 0.08em;
+  margin-top: 2px;
+  text-transform: uppercase;
+}
+
+/* ── Nav ─────────────────────────── */
+.nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: 1;
+  justify-content: center;
+}
+
+.navBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.38rem 1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition);
+  letter-spacing: 0.01em;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: rgba(255,255,255,0.04);
+  color: var(--text);
+}
+
+.navBtn:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.navBtn[data-active='true'] {
+  background: var(--cyan-dim);
+  border-color: var(--border-cyan);
+  color: var(--cyan);
+}
+
+/* ── Status ──────────────────────── */
+.statusArea {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border: 1px solid;
+}
+
+.chipMuted  { background: rgba(255,255,255,0.03); color: var(--text-2); border-color: var(--border); }
+.chipGreen  { background: rgba(16,185,129,.1); color: var(--green); border-color: rgba(16,185,129,.25); }
+.chipCyan   { background: var(--cyan-dim); color: var(--cyan); border-color: var(--border-cyan); }
+.chipRed    { background: var(--red-dim); color: var(--red); border-color: rgba(244,63,94,.28); }

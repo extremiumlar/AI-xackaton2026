@@ -1,0 +1,82 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  user-select: none;
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* ── Region ─────────────────────── */
+.region {
+  cursor: pointer;
+  animation: fade-in 0.4s ease both;
+}
+
+.regionPath {
+  transition: fill-opacity 0.18s ease, stroke-width 0.18s ease;
+}
+
+.region:hover .regionPath {
+  fill-opacity: 0.78 !important;
+  stroke: rgba(255,255,255,0.55) !important;
+  stroke-width: 1.4 !important;
+}
+
+/* Pulse animation for high-threat regions */
+.pulse {
+  animation: pulse-ring 2s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes pulse-ring {
+  0%,100% { opacity: 0.15; transform: scale(1); }
+  50%      { opacity: 0.5;  transform: scale(1.012); }
+}
+
+/* Label */
+.label {
+  fill: rgba(255,255,255,0.88);
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  pointer-events: none;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  letter-spacing: 0.01em;
+}
+
+/* ── Tooltip ─────────────────────── */
+.tooltip {
+  position: absolute;
+  background: rgba(6,10,18,0.97);
+  border: 1px solid rgba(0,180,220,0.25);
+  border-radius: 8px;
+  padding: 10px 13px;
+  pointer-events: none;
+  z-index: 200;
+  min-width: 185px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.ttName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+
+.ttRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.76rem;
+  margin-top: 4px;
+}
+
+.ttRow span:first-child { color: #64748b; }
+.ttRow span:last-child  { color: #cbd5e1; font-weight: 500; }

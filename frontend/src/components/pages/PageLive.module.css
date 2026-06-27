@@ -1,0 +1,117 @@
+.page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  animation: fade-in 0.25s ease both;
+  background: #050810;
+}
+
+/* ── Top bar ───────────────────────── */
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.6rem 1.2rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.liveIndicator {
+  display: flex; align-items: center; gap: 6px;
+  flex-shrink: 0;
+}
+
+.liveText {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--red);
+}
+
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.statVal {
+  font-family: var(--mono);
+  font-size: 0.88rem;
+  font-weight: 700;
+  min-width: 28px;
+}
+
+.statLabel {
+  font-size: 0.7rem;
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statBlink .statVal { animation: dot-pulse 1.2s ease-in-out infinite; }
+
+/* ── Video frame ───────────────────── */
+.frameWrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #020408;
+}
+
+.frame {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+/* Scanning line */
+.scanline {
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,180,220,0.5), transparent);
+  animation: scanline 3s linear infinite;
+  pointer-events: none;
+}
+
+/* Corner brackets */
+.corner {
+  position: absolute;
+  width: 22px; height: 22px;
+  border-color: rgba(0,180,220,0.4);
+  border-style: solid;
+}
+.tl { top:12px;  left:12px;  border-width: 2px 0 0 2px; }
+.tr { top:12px;  right:12px; border-width: 2px 2px 0 0; }
+.bl { bottom:12px; left:12px;  border-width: 0 0 2px 2px; }
+.br { bottom:12px; right:12px; border-width: 0 2px 2px 0; }
+
+/* Idle */
+.frameIdle {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  color: var(--text-2); font-size: 0.85rem;
+}
+
+.loadRing {
+  width: 48px; height: 48px;
+  border: 2px solid rgba(0,180,220,0.1);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
