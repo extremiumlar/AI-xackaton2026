@@ -49,6 +49,7 @@ export default function App() {
   const [frame,      setFrame]      = useState(null)
   const [metrics,    setMetrics]    = useState({ frames: 0, tracks: 0, alerts: 0, fps: 0 })
   const [alertLog,   setAlertLog]   = useState([])
+  const [liveAlerts, setLiveAlerts] = useState([])
   const [outputVideo,setOutputVideo]= useState(null)
   const [error,      setError]      = useState(null)
 
@@ -71,6 +72,7 @@ export default function App() {
     setStatus('running')
     setFrame(null)
     setAlertLog([])
+    setLiveAlerts([])
     setOutputVideo(null)
     setError(null)
     setMetrics({ frames: 0, tracks: 0, alerts: 0, fps: 0 })
@@ -93,6 +95,7 @@ export default function App() {
       if (msg.type === 'frame') {
         setFrame(`data:image/jpeg;base64,${msg.frame}`)
         setMetrics({ frames: msg.idx + 1, tracks: msg.tracks, alerts: msg.alerts, fps: msg.fps })
+        setLiveAlerts(msg.live || [])
       } else if (msg.type === 'done') {
         setStatus('done')
         setAlertLog(msg.alert_log || [])
@@ -156,7 +159,7 @@ export default function App() {
         return <PageDemo samples={samples} demoPath={demoPath}
                          setDemoPath={setDemoPath} onStart={startPipeline} />
       case 'live':
-        return <PageLive frame={frame} metrics={metrics} onStop={stopPipeline} />
+        return <PageLive frame={frame} metrics={metrics} liveAlerts={liveAlerts} onStop={stopPipeline} />
       case 'results':
         return <PageResults metrics={metrics} alertLog={alertLog}
                             outputVideo={outputVideo} onReset={resetAll} />

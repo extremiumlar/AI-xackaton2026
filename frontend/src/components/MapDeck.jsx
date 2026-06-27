@@ -1,355 +1,170 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import * as THREE from 'three'
-import { REGIONS_GEO, DISTRICTS_GEO } from '../data/uzbekistanGeo.js'
-import styles from './MapDeck.module.css'
+import { useState, useMemo, useRef, useCallback } from 'react'
+import { REGIONS_GEO } from '../data/uzbekistanGeo.js'
 
-/* ── Project lon/lat → local XZ plane ─────────────────────── */
-const LON0 = 63.0, LAT0 = 41.8, SCALE = 18
+/* ── Projection ─────────────────────────────────────── */
+const W = 900, H = 500
+const LON_MIN = 55.5, LON_MAX = 73.5
+const LAT_MIN = 36.8, LAT_MAX = 46.2
+const PAD = 24
+
 function project([lon, lat]) {
-  return [
-    (lon - LON0) * SCALE,
-    -(lat - LAT0) * SCALE,
-  ]
+  const x = PAD + ((lon - LON_MIN) / (LON_MAX - LON_MIN)) * (W - PAD * 2)
+  const y = PAD + ((LAT_MAX - lat) / (LAT_MAX - LAT_MIN)) * (H - PAD * 2)
+  return [x, y]
 }
 
-/* ── Score → hex color ────────────────────────────────────── */
-function scoreHex(s) {
-  if (s >= 0.75) return 0xef4444
-  if (s >= 0.55) return 0xf97316
-  if (s >= 0.38) return 0xeab308
-  if (s >= 0.22) return 0x84cc16
-  return 0x10b981
+function ringToPath(ring) {
+  return ring.map(([lon, lat], i) => {
+    const [x, y] = project([lon, lat])
+    return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`
+  }).join(' ') + ' Z'
 }
 
-/* ── Build an extruded mesh from a GeoJSON polygon ring ────── */
-function buildMesh(ring, height, color, emissive = 0x000000) {
-  const pts = ring.slice(0, -1).map(c => {
-    const [x, y] = project(c)
-    return new THREE.Vector2(x, y)
-  })
-
-  const shape = new THREE.Shape(pts)
-  const geo   = new THREE.ExtrudeGeometry(shape, {
-    depth: height, bevelEnabled: false,
-  })
-
-  const mat = new THREE.MeshPhongMaterial({
-    color,
-    emissive,
-    emissiveIntensity: 0.15,
-    transparent: true,
-    opacity: 0.82,
-    side: THREE.DoubleSide,
-  })
-
-  const mesh = new THREE.Mesh(geo, mat)
-  mesh.rotation.x = -Math.PI / 2
-  return mesh
+/* ── Score → color ──────────────────────────────────── */
+function scoreColor(s, alpha = 1) {
+  if (s >= 0.75) return `rgba(220,38,38,${alpha})`
+  if (s >= 0.55) return `rgba(234,88,12,${alpha})`
+  if (s >= 0.38) return `rgba(202,138,4,${alpha})`
+  if (s >= 0.22) return `rgba(101,163,13,${alpha})`
+  return `rgba(5,150,105,${alpha})`
 }
 
-/* ── Build edge lines ──────────────────────────────────────── */
-function buildEdge(ring) {
-  const pts = ring.map(c => {
-    const [x, y] = project(c)
-    return new THREE.Vector3(x, 0.05, y)
-  })
-  const geo = new THREE.BufferGeometry().setFromPoints(pts)
-  const mat = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.25, transparent: true })
-  return new THREE.Line(geo, mat)
+function scoreStroke(s) {
+  if (s >= 0.75) return '#ef4444'
+  if (s >= 0.55) return '#f97316'
+  if (s >= 0.38) return '#eab308'
+  if (s >= 0.22) return '#84cc16'
+  return '#10b981'
+}
+
+function levelLabel(s) {
+  if (s >= 0.75) return 'Juda xavfli'
+  if (s >= 0.55) return 'Xavfli'
+  if (s >= 0.38) return "O'rta"
+  if (s >= 0.22) return 'Past'
+  return 'Xavfsiz'
 }
 
 export default function MapDeck({ regionData }) {
-  const mountRef  = useRef(null)
-  const stateRef  = useRef({})      // holds THREE objects
-  const [hovered, setHovered]   = useState(null)
-  const [mousePos,setMousePos]  = useState({ x: 0, y: 0 })
-  const [showDist,setShowDist]  = useState(false)
+  const [hovered, setHovered] = useState(null)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const svgRef = useRef(null)
 
-  /* ── District scores ──── */
-  const districtScores = useRef({})
-  useEffect(() => {
-    const out = {}
-    DISTRICTS_GEO.features.forEach(f => {
-      const base = regionData[f.properties.regionId]?.score ?? 0.3
-      const seed = f.properties.id.charCodeAt(f.properties.id.length - 1) / 127
-      out[f.properties.id] = Math.max(0, Math.min(1, base + (seed - 0.5) * 0.28))
-    })
-    districtScores.current = out
-  }, [regionData])
-
-  /* ── Init Three.js ──────────────────────────────────────── */
-  useEffect(() => {
-    const el = mountRef.current
-    if (!el) return
-
-    /* Scene */
-    const scene  = new THREE.Scene()
-    scene.background = new THREE.Color(0x050810)
-    scene.fog = new THREE.Fog(0x050810, 60, 160)
-
-    /* Camera */
-    const w = el.clientWidth, h = el.clientHeight
-    const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 500)
-    camera.position.set(0, 45, 30)
-    camera.lookAt(0, 0, 0)
-
-    /* Renderer */
-    const renderer = new THREE.WebGLRenderer({ antialias: true })
-    renderer.setPixelRatio(window.devicePixelRatio)
-    renderer.setSize(w, h)
-    renderer.shadowMap.enabled = true
-    el.appendChild(renderer.domElement)
-
-    /* Lights */
-    scene.add(new THREE.AmbientLight(0x334466, 2.5))
-    const dir = new THREE.DirectionalLight(0xffffff, 1.8)
-    dir.position.set(10, 30, 10)
-    scene.add(dir)
-
-    /* Grid floor */
-    const grid = new THREE.GridHelper(200, 80, 0x0a1628, 0x0a1628)
-    grid.position.y = -0.1
-    scene.add(grid)
-
-    /* ── Build region meshes ── */
-    const regionMeshes   = []
-    const districtMeshes = []
-
-    REGIONS_GEO.features.forEach(feat => {
+  const regions = useMemo(() =>
+    REGIONS_GEO.features.map(feat => {
       const id    = feat.properties.id
       const score = regionData[id]?.score ?? 0.1
-      const color = scoreHex(score)
-      const h     = Math.max(0.3, score * 8)
+      const path  = ringToPath(feat.geometry.coordinates[0])
+      return { id, score, path, props: feat.properties }
+    }),
+  [regionData])
 
-      const mesh = buildMesh(feat.geometry.coordinates[0], h, color)
-      mesh.userData = { type: 'region', id, props: feat.properties, score }
-      scene.add(mesh)
-      scene.add(buildEdge(feat.geometry.coordinates[0]))
-      regionMeshes.push(mesh)
-    })
-
-    DISTRICTS_GEO.features.forEach(feat => {
-      const id    = feat.properties.id
-      const score = districtScores.current[id] ?? 0.3
-      const color = scoreHex(score)
-      const h     = Math.max(0.15, score * 3.5)
-
-      const mesh = buildMesh(feat.geometry.coordinates[0], h, color)
-      mesh.userData = { type: 'district', id, props: feat.properties, score }
-      mesh.visible  = false
-      scene.add(mesh)
-      districtMeshes.push(mesh)
-    })
-
-    /* ── Orbit controls (manual) ── */
-    let isDragging = false, prevMouse = { x: 0, y: 0 }
-    let spherical  = { theta: 0.4, phi: 0.85, radius: 55 }
-
-    function updateCamera() {
-      camera.position.set(
-        spherical.radius * Math.sin(spherical.phi) * Math.sin(spherical.theta),
-        spherical.radius * Math.cos(spherical.phi),
-        spherical.radius * Math.sin(spherical.phi) * Math.cos(spherical.theta),
-      )
-      camera.lookAt(0, 0, 0)
-    }
-    updateCamera()
-
-    /* ── Raycaster for hover ── */
-    const raycaster = new THREE.Raycaster()
-    const mouse2d   = new THREE.Vector2()
-    let   animFrame = null
-
-    function onMouseMove(e) {
-      const rect = el.getBoundingClientRect()
-      mouse2d.x = ((e.clientX - rect.left) / rect.width)  * 2 - 1
-      mouse2d.y = -((e.clientY - rect.top)  / rect.height) * 2 + 1
-      setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-
-      if (isDragging) {
-        const dx = e.clientX - prevMouse.x
-        const dy = e.clientY - prevMouse.y
-        spherical.theta -= dx * 0.008
-        spherical.phi    = Math.max(0.2, Math.min(1.4, spherical.phi + dy * 0.008))
-        prevMouse = { x: e.clientX, y: e.clientY }
-        updateCamera()
-      }
-    }
-
-    function onMouseDown(e) {
-      isDragging = true
-      prevMouse  = { x: e.clientX, y: e.clientY }
-    }
-    function onMouseUp()   { isDragging = false }
-
-    function onWheel(e) {
-      spherical.radius = Math.max(10, Math.min(120, spherical.radius + e.deltaY * 0.05))
-      updateCamera()
-    }
-
-    function checkHover() {
-      raycaster.setFromCamera(mouse2d, camera)
-      const targets = showDist
-        ? districtMeshes.filter(m => m.visible)
-        : regionMeshes
-      const hits = raycaster.intersectObjects(targets)
-      if (hits.length) {
-        const obj = hits[0].object
-        setHovered(obj.userData.props ?? null)
-        el.style.cursor = 'pointer'
-      } else {
-        setHovered(null)
-        el.style.cursor = 'grab'
-      }
-    }
-
-    /* ── Click: toggle region→districts ── */
-    function onClick() {
-      raycaster.setFromCamera(mouse2d, camera)
-      const hits = raycaster.intersectObjects(regionMeshes)
-      if (hits.length) {
-        const rId = hits[0].object.userData.id
-        regionMeshes.forEach(m => m.visible = false)
-        districtMeshes.forEach(m => {
-          m.visible = m.userData.props?.regionId === rId
-        })
-        stateRef.current.showDistricts = true
-        setShowDist(true)
-      }
-    }
-
-    el.addEventListener('mousemove', onMouseMove)
-    el.addEventListener('mousedown', onMouseDown)
-    el.addEventListener('mouseup',   onMouseUp)
-    el.addEventListener('wheel',     onWheel, { passive: true })
-    el.addEventListener('click',     onClick)
-
-    /* ── Resize ── */
-    const onResize = () => {
-      camera.aspect = el.clientWidth / el.clientHeight
-      camera.updateProjectionMatrix()
-      renderer.setSize(el.clientWidth, el.clientHeight)
-    }
-    window.addEventListener('resize', onResize)
-
-    /* ── Animate ── */
-    const animate = () => {
-      animFrame = requestAnimationFrame(animate)
-      checkHover()
-      renderer.render(scene, camera)
-    }
-    animate()
-
-    /* Store refs for external controls */
-    stateRef.current = {
-      scene, camera, renderer, spherical, updateCamera,
-      regionMeshes, districtMeshes, showDistricts: false,
-    }
-
-    return () => {
-      cancelAnimationFrame(animFrame)
-      el.removeEventListener('mousemove', onMouseMove)
-      el.removeEventListener('mousedown', onMouseDown)
-      el.removeEventListener('mouseup',   onMouseUp)
-      el.removeEventListener('wheel',     onWheel)
-      el.removeEventListener('click',     onClick)
-      window.removeEventListener('resize', onResize)
-      renderer.dispose()
-      if (el.contains(renderer.domElement)) el.removeChild(renderer.domElement)
-    }
-  }, [regionData])
-
-  /* ── External: go home ── */
-  const flyHome = useCallback(() => {
-    const s = stateRef.current
-    if (!s.regionMeshes) return
-    s.regionMeshes.forEach(m => m.visible = true)
-    s.districtMeshes.forEach(m => m.visible = false)
-    s.spherical.theta  = 0.4
-    s.spherical.phi    = 0.85
-    s.spherical.radius = 55
-    s.updateCamera()
-    s.showDistricts = false
-    setShowDist(false)
-    setHovered(null)
+  const onMouseMove = useCallback((e) => {
+    const rect = svgRef.current?.getBoundingClientRect()
+    if (rect) setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top })
   }, [])
 
-  /* ── Zoom ── */
-  const zoom = useCallback((dir) => {
-    const s = stateRef.current
-    if (!s.spherical) return
-    s.spherical.radius = Math.max(10, Math.min(120, s.spherical.radius - dir * 8))
-    s.updateCamera()
-  }, [])
-
-  const rData = hovered
-    ? regionData[hovered.regionId ?? hovered.id]
-    : null
+  const hData = hovered ? regionData[hovered.id] : null
 
   return (
-    <div className={styles.wrap}>
-      <div ref={mountRef} className={styles.canvas} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: '#060b14', borderRadius: 10 }}>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: '100%', height: '100%', display: 'block' }}
+        onMouseMove={onMouseMove}
+        onMouseLeave={() => setHovered(null)}
+      >
+        {/* Grid lines */}
+        <defs>
+          <pattern id="grid" width="60" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 60 0 L 0 0 0 40" fill="none" stroke="rgba(0,180,220,0.04)" strokeWidth="1"/>
+          </pattern>
+        </defs>
+        <rect width={W} height={H} fill="url(#grid)" rx="10"/>
 
-      {/* Controls */}
-      <div className={styles.controls}>
-        <button className={`btn btn-ghost ${styles.ctrlBtn}`}
-                onClick={flyHome} title="Orqaga">⌂</button>
-        <button className={`btn btn-ghost ${styles.ctrlBtn}`}
-                onClick={() => zoom(1)}>+</button>
-        <button className={`btn btn-ghost ${styles.ctrlBtn}`}
-                onClick={() => zoom(-1)}>−</button>
-      </div>
+        {/* Region polygons */}
+        {regions.map(r => (
+          <path
+            key={r.id}
+            d={r.path}
+            fill={scoreColor(r.score, hovered?.id === r.id ? 1.0 : 0.82)}
+            stroke={hovered?.id === r.id ? scoreStroke(r.score) : 'rgba(255,255,255,0.15)'}
+            strokeWidth={hovered?.id === r.id ? 2 : 0.8}
+            style={{ cursor: 'pointer', transition: 'all 0.15s' }}
+            onMouseEnter={() => setHovered(r)}
+            onMouseLeave={() => setHovered(null)}
+          />
+        ))}
 
-      {/* Hint */}
-      <div className={styles.zoomHint}>
-        {!showDist
-          ? <><span className={styles.dot}/>Viloyatni bosing → tumanlar · sichqoncha bilan aylantiring</>
-          : <><span className={styles.dot} style={{background:'#f97316'}}/>
-              Tumanlar ko'rinishi · ⌂ tugmasi → orqaga</>
-        }
-      </div>
+        {/* Region labels for large regions */}
+        {regions.filter(r => r.score >= 0.55).map(r => {
+          const coords = REGIONS_GEO.features.find(f => f.properties.id === r.id)?.geometry.coordinates[0] ?? []
+          if (!coords.length) return null
+          const cx = coords.reduce((s, c) => s + c[0], 0) / coords.length
+          const cy = coords.reduce((s, c) => s + c[1], 0) / coords.length
+          const [px, py] = project([cx, cy])
+          return (
+            <text key={r.id + '_lbl'} x={px} y={py}
+                  textAnchor="middle" dominantBaseline="middle"
+                  fontSize="9" fontWeight="700" fill="rgba(255,255,255,0.9)"
+                  style={{ pointerEvents: 'none', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
+              {(r.score * 100).toFixed(0)}%
+            </text>
+          )
+        })}
+      </svg>
 
       {/* Tooltip */}
       {hovered && (
-        <div className={styles.tooltip}
-             style={{ left: mousePos.x + 16, top: mousePos.y - 70 }}>
-          <div className={styles.ttTitle}>
-            {hovered.name}
-            {hovered.regionId && (
-              <span className={styles.ttSub}> — {hovered.regionId.replace(/_/g,' ')}</span>
-            )}
+        <div style={{
+          position: 'absolute',
+          left: Math.min(mousePos.x + 14, W - 200),
+          top: Math.max(mousePos.y - 80, 8),
+          background: 'rgba(6,10,18,0.97)',
+          border: `1px solid ${scoreStroke(hovered.score)}55`,
+          borderLeft: `3px solid ${scoreStroke(hovered.score)}`,
+          borderRadius: 9,
+          padding: '10px 14px',
+          minWidth: 180,
+          pointerEvents: 'none',
+          zIndex: 50,
+          backdropFilter: 'blur(12px)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+        }}>
+          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#e2e8f0', marginBottom: 6 }}>
+            {hovered.props.name}
           </div>
-          <div className={styles.ttRow}>
-            <span>Xavf bali</span>
-            <span style={{
-              color: `#${scoreHex(
-                hovered.regionId
-                  ? (districtScores.current[hovered.id] ?? 0)
-                  : (regionData[hovered.id]?.score ?? 0)
-              ).toString(16).padStart(6,'0')}`,
-              fontWeight: 700
-            }}>
-              {((hovered.regionId
-                  ? (districtScores.current[hovered.id] ?? 0)
-                  : (regionData[hovered.id]?.score ?? 0)) * 100).toFixed(0)}%
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5 }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Xavf darajasi</span>
+            <span style={{ fontSize: '0.82rem', fontWeight: 700, color: scoreStroke(hovered.score) }}>
+              {(hovered.score * 100).toFixed(0)}% — {levelLabel(hovered.score)}
             </span>
           </div>
-          {rData && <>
-            <div className={styles.ttRow}>
-              <span>Alertlar</span>
-              <span style={{color:'#f97316'}}>{rData.alerts}</span>
+          {hData && <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+              <span style={{ fontSize: '0.73rem', color: '#64748b' }}>Alertlar</span>
+              <span style={{ fontSize: '0.78rem', color: '#f97316', fontWeight: 600 }}>{hData.alerts}</span>
             </div>
-            <div className={styles.ttRow}>
-              <span>Kameralar</span>
-              <span style={{color:'#00b4d8'}}>{rData.cameras}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.73rem', color: '#64748b' }}>Kameralar</span>
+              <span style={{ fontSize: '0.78rem', color: '#00b4d8', fontWeight: 600 }}>{hData.cameras}</span>
             </div>
           </>}
-          {hovered.capital && (
-            <div className={styles.ttRow}>
-              <span>Markaz</span>
-              <span>{hovered.capital}</span>
+          {hovered.props.capital && (
+            <div style={{ marginTop: 6, fontSize: '0.7rem', color: '#475569' }}>
+              Markaz: {hovered.props.capital}
             </div>
           )}
+          {/* Score bar */}
+          <div style={{ marginTop: 8, height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 2 }}>
+            <div style={{
+              height: '100%', borderRadius: 2,
+              width: `${hovered.score * 100}%`,
+              background: scoreStroke(hovered.score),
+              transition: 'width 0.3s',
+            }}/>
+          </div>
         </div>
       )}
     </div>

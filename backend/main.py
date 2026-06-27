@@ -123,6 +123,24 @@ async def run_ws(ws: WebSocket, job_id: str):
         b64 = base64.b64encode(buf.tobytes()).decode()
         elapsed = time.time() - start_t
         fps = (frame_idx + 1) / max(elapsed, 1e-9)
+
+        # Real-time per-person behavior
+        live = []
+        for det, state in analyzed:
+            if state.suspicion_score >= 0.25:
+                flags = []
+                if state.is_crouching:       flags.append("Cho'qqayish")
+                if state.is_hand_to_ground:  flags.append("Qo'l yerga")
+                if state.is_loitering:       flags.append("Turib qolgan")
+                if state.is_looking_around:  flags.append("Atrofga qaraydi")
+                live.append({
+                    "id": state.track_id,
+                    "score": round(state.suspicion_score, 2),
+                    "alert": state.alert_triggered,
+                    "flags": flags,
+                })
+        live.sort(key=lambda x: -x["score"])
+
         msg = {
             "type": "frame",
             "frame": b64,
@@ -130,6 +148,7 @@ async def run_ws(ws: WebSocket, job_id: str):
             "tracks": len(analyzed),
             "alerts": alerts_total,
             "fps": round(fps, 1),
+            "live": live[:6],
         }
         fut = asyncio.run_coroutine_threadsafe(queue.put(msg), loop)
         try:
