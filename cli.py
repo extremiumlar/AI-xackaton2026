@@ -51,12 +51,13 @@ def main():
     if args.device:
         config.device = args.device
 
-    # Output yo'li
+    # Output yo'li — webcam (int) bo'lsa ham timestamp asosida saqlanadi
     output_path = args.output
-    if output_path is None and isinstance(source, str):
+    if output_path is None:
         ts = int(time.time())
         Path(config.video_dir).mkdir(parents=True, exist_ok=True)
-        output_path = str(Path(config.video_dir) / f"result_{ts}.mp4")
+        prefix = "webcam" if isinstance(source, int) else "result"
+        output_path = str(Path(config.video_dir) / f"{prefix}_{ts}.mp4")
 
     print(f"[+] Manba: {source}")
     print(f"[+] Output: {output_path}")

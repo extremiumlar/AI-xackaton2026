@@ -1,6 +1,13 @@
-"""YOLO + Pose + ByteTrack ni o'rab oluvchi modul."""
+"""YOLO-Pose + ByteTrack ni o'rab oluvchi modul.
 
-from dataclasses import dataclass, field
+Eslatma: oldingi versiyada har freymda ikkita YOLO modeli (detector + pose)
+alohida chaqirilardi va ularning bbox'lari markaz masofa orqali
+moslashtirilardi — bu 2x sekin va olomonda noto'g'ri keypoint
+biriktirardi. Endi faqat pose modeli ishlatiladi (u o'zi person'ni
+track qiladi va keypointlarni qaytaradi).
+"""
+
+from dataclasses import dataclass
 from typing import Optional
 import numpy as np
 from ultralytics import YOLO
@@ -54,8 +61,22 @@ class Detector:
                  conf: float = 0.4,
                  iou: float = 0.5,
                  person_class_id: int = 0):
-        self.detector = YOLO(det_model)
-        self.poser = YOLO(pose_model)
+        # det_model endi backward-compatibility uchun saqlanadi, lekin
+        # ishlatilmaydi — pose modeli o'zi person detect + track qiladi.
+        if det_model and det_model != pose_model and "pose" not in det_model:
+            print(f"[Detector] Eslatma: '{det_model}' o'tkazib yuborildi, "
+                  f"faqat pose modeli ishlatiladi: {pose_model}")
+
+        try:
+            self.poser = YOLO(pose_model)
+        except Exception as e:
+            raise RuntimeError(
+                f"Pose modelini yuklab bo'lmadi: {pose_model}\n"
+                f"Sabab: {e}\n"
+                f"Yechim: internetga ulaning yoki .pt faylini qo'lda yuklab, "
+                f"loyiha papkasiga qo'ying."
+            ) from e
+
         self.tracker = tracker
         self.device = device
         self.conf = conf
@@ -63,9 +84,11 @@ class Detector:
         self.person_class_id = person_class_id
 
     def process_frame(self, frame: np.ndarray, frame_idx: int = 0) -> list:
-        """Bitta freymdan barcha odamlarni topadi, kuzatadi va pose chiqaradi."""
+        """Bitta freymdan barcha odamlarni topadi, kuzatadi va pose chiqaradi.
 
-        track_results = self.detector.track(
+        Pose modeli bbox + track_id + 17 keypointni bitta inference'da beradi.
+        """
+        results = self.poser.track(
             frame,
             persist=True,
             classes=[self.person_class_id],
@@ -76,65 +99,29 @@ class Detector:
             verbose=False,
         )
 
-        if not track_results or track_results[0].boxes is None:
+        if not results:
+            return []
+        r = results[0]
+        if r.boxes is None or r.boxes.id is None:
             return []
 
-        boxes = track_results[0].boxes
-        if boxes.id is None:
-            return []
+        track_ids = r.boxes.id.cpu().numpy().astype(int)
+        xyxys = r.boxes.xyxy.cpu().numpy()
+        confs = r.boxes.conf.cpu().numpy()
 
-        track_ids = boxes.id.cpu().numpy().astype(int)
-        xyxys = boxes.xyxy.cpu().numpy()
-        confs = boxes.conf.cpu().numpy()
-
-        # Pose estimation alohida chaqiriladi (track yo'q, lekin keypoint kerak)
-        pose_results = self.poser(frame, conf=self.conf, device=self.device, verbose=False)
-        pose_kps = None
-        pose_bboxes = None
-        if pose_results and pose_results[0].keypoints is not None:
-            pose_kps = pose_results[0].keypoints.data.cpu().numpy()  # (N, 17, 3)
-            if pose_results[0].boxes is not None:
-                pose_bboxes = pose_results[0].boxes.xyxy.cpu().numpy()
+        kps_data = None
+        if r.keypoints is not None and r.keypoints.data is not None \
+                and len(r.keypoints.data):
+            kps_data = r.keypoints.data.cpu().numpy()   # (N, 17, 3)
 
         detections = []
-        for i, (tid, bbox, conf) in enumerate(zip(track_ids, xyxys, confs)):
-            kps = self._match_pose(bbox, pose_kps, pose_bboxes)
+        for i, (tid, bbox, cf) in enumerate(zip(track_ids, xyxys, confs)):
+            kps = kps_data[i] if (kps_data is not None and i < len(kps_data)) else None
             detections.append(PersonDetection(
                 track_id=int(tid),
                 bbox=tuple(bbox.tolist()),
-                confidence=float(conf),
+                confidence=float(cf),
                 keypoints=kps,
                 frame_idx=frame_idx,
             ))
         return detections
-
-    @staticmethod
-    def _match_pose(bbox: np.ndarray,
-                    pose_kps: Optional[np.ndarray],
-                    pose_bboxes: Optional[np.ndarray]) -> Optional[np.ndarray]:
-        """Pose modelining natijasidan eng yaqin bbox bilan mos keluvchi keypointsni topadi."""
-        if pose_kps is None or pose_bboxes is None or len(pose_kps) == 0:
-            return None
-
-        bx = (bbox[0] + bbox[2]) / 2
-        by = (bbox[1] + bbox[3]) / 2
-
-        best_idx = -1
-        best_dist = float("inf")
-        for i, pb in enumerate(pose_bboxes):
-            cx = (pb[0] + pb[2]) / 2
-            cy = (pb[1] + pb[3]) / 2
-            d = (cx - bx) ** 2 + (cy - by) ** 2
-            if d < best_dist:
-                best_dist = d
-                best_idx = i
-
-        if best_idx < 0:
-            return None
-
-        # Faqat yaqin bo'lsa qabul qilamiz
-        bbox_w = bbox[2] - bbox[0]
-        if best_dist > (bbox_w ** 2):
-            return None
-
-        return pose_kps[best_idx]

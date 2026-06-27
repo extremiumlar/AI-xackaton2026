@@ -16,6 +16,8 @@ class BehaviorState:
     nose_x_history: deque = field(default_factory=lambda: deque(maxlen=30))
     crouch_history: deque = field(default_factory=lambda: deque(maxlen=15))
     hand_history: deque = field(default_factory=lambda: deque(maxlen=15))
+    # suspicion_history maxlen analyzer tomonidan dinamik o'rnatiladi
+    # (sustained_frames'dan past bo'lmasligi uchun)
     suspicion_history: deque = field(default_factory=lambda: deque(maxlen=30))
     first_seen_frame: int = 0
     last_seen_frame: int = 0
@@ -56,7 +58,10 @@ class BehaviorAnalyzer:
             "look_around": 0.10,
         }
         self.alert_threshold = alert_threshold
-        self.sustained_frames = sustained_frames
+        self.sustained_frames = max(1, int(sustained_frames))
+        # suspicion_history bufer hech bo'lmaganda sustained_frames'ga
+        # teng bo'lishi shart, aks holda alert hech qachon tetiklanmaydi.
+        self._suspicion_maxlen = max(30, self.sustained_frames * 2)
 
         self.states: dict = {}
 
@@ -71,6 +76,7 @@ class BehaviorAnalyzer:
             if state is None:
                 state = BehaviorState(track_id=det.track_id,
                                        first_seen_frame=frame_idx)
+                state.suspicion_history = deque(maxlen=self._suspicion_maxlen)
                 self.states[det.track_id] = state
 
             state.last_seen_frame = frame_idx

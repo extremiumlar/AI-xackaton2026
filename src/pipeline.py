@@ -85,9 +85,11 @@ class PipelineConfig:
 
 
 class Pipeline:
-    def __init__(self, config: PipelineConfig):
+    def __init__(self, config: PipelineConfig, detector: Optional[Detector] = None):
+        """Tashqaridan oldindan yuklangan Detector berilishi mumkin
+        (Streamlit kabi UI'larda model qayta yuklanmasligi uchun)."""
         self.config = config
-        self.detector = Detector(
+        self.detector = detector if detector is not None else Detector(
             det_model=config.detector,
             pose_model=config.pose,
             tracker=config.tracker,
@@ -98,6 +100,29 @@ class Pipeline:
         )
         self.analyzer = None  # fps bilan birga keyin yaratiladi
         self.alert_log = []
+
+    @staticmethod
+    def _open_writer(path: str, fps: float, w: int, h: int):
+        """VideoWriter ochish — codec'lar fallback bilan.
+
+        Qaytaradi: (writer | None, yangilangan_path).
+        """
+        candidates = [("mp4v", path)]
+        # .mp4 → .avi fallback (XVID Windows'da ishonchli)
+        if path.lower().endswith(".mp4"):
+            candidates.append(("XVID", path[:-4] + ".avi"))
+        candidates.append(("MJPG", path.rsplit(".", 1)[0] + ".avi"))
+
+        for codec, p in candidates:
+            fourcc = cv2.VideoWriter_fourcc(*codec)
+            w_obj = cv2.VideoWriter(p, fourcc, fps, (w, h))
+            if w_obj.isOpened():
+                if p != path:
+                    print(f"[Pipeline] mp4v ishlamadi, {codec} bilan saqlanadi: {p}")
+                return w_obj, p
+            w_obj.release()
+        print(f"[Pipeline] Hech qaysi codec ishlamadi — video saqlanmaydi: {path}")
+        return None, path
 
     def _init_analyzer(self, fps: float):
         self.analyzer = BehaviorAnalyzer(
@@ -121,6 +146,11 @@ class Pipeline:
             max_frames: Optional[int] = None) -> dict:
         """source: video fayl yo'li yoki 0 (webcam)."""
 
+        # Raqamli string (masalan "0") int ga aylantiriladi —
+        # cv2.VideoCapture("0") Windows'da ishlamaydi.
+        if isinstance(source, str) and source.isdigit():
+            source = int(source)
+
         cap = cv2.VideoCapture(source)
         if not cap.isOpened():
             raise RuntimeError(f"Video manbasi ochilmadi: {source}")
@@ -140,12 +170,11 @@ class Pipeline:
 
         self._init_analyzer(src_fps)
 
-        # Output writer
+        # Output writer — codec'lar tartib bo'yicha sinab ko'riladi
         writer = None
         if output_path and self.config.save_video:
             Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-            writer = cv2.VideoWriter(output_path, fourcc, src_fps, (out_w, out_h))
+            writer, output_path = self._open_writer(output_path, src_fps, out_w, out_h)
 
         # Alert papkasi
         alert_dir = Path(self.config.alert_image_dir)
@@ -196,6 +225,7 @@ class Pipeline:
                             int(state.is_loitering),
                             int(state.is_looking_around),
                         ])
+                        log_file.flush()  # crash bo'lsa ham yozilsin
                         flags = []
                         if state.is_crouching:      flags.append("Cho'qqayish")
                         if state.is_hand_to_ground:  flags.append("Yerga qo'l uzatish")
@@ -211,6 +241,12 @@ class Pipeline:
                         snap = draw_overlay(frame, [(det, state)],
                                             alert_threshold=self.config.alert_threshold)
                         cv2.imwrite(str(alert_dir / f"alert_{frame_idx}_{state.track_id}.jpg"), snap)
+
+                # Yo'qolgan track ID'larni xotiradan tozalash (memory leak fix).
+                # analyzer.states allaqachon stale track'larni o'chirib qo'ygan.
+                if frame_idx % 300 == 0 and self.analyzer is not None:
+                    live = set(self.analyzer.states.keys())
+                    already_alerted_tracks &= live
 
                 # Vizualizatsiya
                 vis = draw_overlay(

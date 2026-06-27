@@ -10,6 +10,7 @@ import numpy as np
 import streamlit as st
 import pandas as pd
 
+from src.detector import Detector
 from src.pipeline import Pipeline, PipelineConfig
 
 
@@ -111,15 +112,23 @@ with col_right:
     metric_fps = st.empty()
 
 
-# Asosiy oqim
+# Asosiy oqim — faqat og'ir model yuklash keshlanadi.
+# Threshold/vazn slider'lari o'zgarsa, model qayta yuklanmaydi.
 @st.cache_resource(show_spinner="Modellar yuklanmoqda...")
-def get_pipeline(detector_model: str, pose_model: str, device: str,
-                  conf: float, alert_threshold: float, sustained_frames: int,
-                  crouch_ratio: float, hand_ratio: float,
-                  loiter_sec: float, loiter_radius: float,
-                  w_crouch: float, w_hand: float, w_loiter: float, w_look: float,
-                  resize_width: int, skip_frames: int):
-    """Pipeline ni keshlash — model qayta yuklanmaydi."""
+def get_detector(detector_model: str, pose_model: str, device: str):
+    return Detector(
+        det_model=detector_model,
+        pose_model=pose_model,
+        device=device,
+    )
+
+
+def build_pipeline(detector_model, pose_model, device,
+                    conf, alert_threshold, sustained_frames,
+                    crouch_ratio, hand_ratio, loiter_sec, loiter_radius,
+                    w_crouch, w_hand, w_loiter, w_look,
+                    resize_width, skip_frames):
+    """Engil — har safar yangi config, lekin Detector keshdan."""
     config = PipelineConfig(
         detector=detector_model,
         pose=pose_model,
@@ -144,11 +153,14 @@ def get_pipeline(detector_model: str, pose_model: str, device: str,
         log_dir="logs/",
         alert_image_dir="output/alerts/",
     )
-    return Pipeline(config)
+    detector = get_detector(detector_model, pose_model, device)
+    # Detector parametrlarini yangi config'ga moslab qo'yamiz
+    detector.conf = conf
+    return Pipeline(config, detector=detector)
 
 
 if run_btn and source is not None:
-    pipeline = get_pipeline(
+    pipeline = build_pipeline(
         detector_model, pose_model, device,
         conf, alert_threshold, int(sustained_frames),
         crouch_ratio, hand_ratio,
